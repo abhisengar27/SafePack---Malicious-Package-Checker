@@ -1,1 +1,1 @@
-# SafePack---Malicious-Package-Checker
+# SafePack - Malicious-Package-Checker
