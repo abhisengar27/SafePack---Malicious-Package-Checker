@@ -33,13 +33,13 @@
                             Package Ecosystem
                         </label>
                         <select id="ecosystem" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="npm" data-api="npm">npm (JavaScript)</option>
-                            <option value="PyPI" data-api="PyPI">PyPI (Python)</option>
-                            <option value="Go" data-api="Go">Go</option>
-                            <option value="Maven" data-api="Maven">Maven (Java)</option>
-                            <option value="crates.io" data-api="crates.io">crates.io (Rust)</option>
-                            <option value="NuGet" data-api="NuGet">NuGet (.NET)</option>
-                            <option value="RubyGems" data-api="RubyGems">RubyGems (Ruby)</option>
+                            <option value="npm">npm (JavaScript)</option>
+                            <option value="PyPI">PyPI (Python)</option>
+                            <option value="Go">Go</option>
+                            <option value="Maven">Maven (Java)</option>
+                            <option value="crates.io">crates.io (Rust)</option>
+                            <option value="NuGet">NuGet (.NET)</option>
+                            <option value="RubyGems">RubyGems (Ruby)</option>
                         </select>
                     </div>
                     <div>
@@ -95,7 +95,7 @@
                 </p>
                 <p>
                     Created by 
-                    <a href="https://www.linkedin.com/in/abhishek-sengar-cybersecurity/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Abhishek Sengar</a>
+                    <a href="https://www.linkedin.com/in/abhishek-sengar/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Abhishek Sengar</a>
                 </p>
             </div>
         </div>
@@ -139,72 +139,82 @@ async function checkOSV(pkgName, pkgVersion, ecosystem) {
     return await response.json();
 }
 
-function analyzeResults(osvData) {
-    const analysis = {
-        malwareFound: false,
-        malwareReports: [],
-        vulnReports: [],
-        sources: [],
-        packageExists: true
-    };
-    if (osvData.vulns && osvData.vulns.length > 0) {
-        osvData.vulns.forEach(vuln => {
-            const isMalware = vuln.id?.startsWith('MAL-') || (vuln.aliases?.some(a => a.startsWith('MAL-')));
-            if (isMalware) {
-                analysis.malwareFound = true;
-                if (!analysis.sources.includes('OSV.dev (Google)')) analysis.sources.push('OSV.dev (Google)');
-                analysis.malwareReports.push({
-                    id: vuln.id,
-                    summary: vuln.summary || 'No summary available',
-                    details: vuln.details || '',
-                    aliases: vuln.aliases || [],
-                    sources: [{ name: 'OSV.dev', url: `https://osv.dev/vulnerability/${vuln.id}` }]
-                });
-            } else {
-                analysis.vulnReports.push({
-                    id: vuln.id,
-                    summary: vuln.summary || 'No summary available',
-                    details: vuln.details || '',
-                    aliases: vuln.aliases || [],
-                    sources: [{ name: 'OSV.dev', url: `https://osv.dev/vulnerability/${vuln.id}` }]
-                });
-            }
-        });
-    }
-    return analysis;
-}
-
-function renderResults(results) {
+function renderResults(osvData) {
     let html = '';
-    // Status message
-    if (results.malwareFound) {
-        mainIcon.innerHTML = icons.shieldX;
-        html += `
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-                <div class="flex items-center gap-2 text-red-700 font-semibold">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    MALWARE DETECTED
+    if (osvData.vulns && osvData.vulns.length > 0) {
+        // Check if any are malware
+        const malware = osvData.vulns.filter(vuln => vuln.id.startsWith('MAL-') || (vuln.aliases && vuln.aliases.some(a => a.startsWith('MAL-'))));
+        const others = osvData.vulns.filter(vuln => !malware.includes(vuln));
+        if (malware.length > 0) {
+            mainIcon.innerHTML = icons.shieldX;
+            html += `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+                    <div class="flex items-center gap-2 text-red-700 font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        MALWARE DETECTED
+                    </div>
+                    <p class="text-red-600 mt-2 text-sm">
+                        This package has been flagged as malicious. Do NOT install or use this package.
+                    </p>
                 </div>
-                <p class="text-red-600 mt-2 text-sm">
-                    This package has been flagged as malicious. Do NOT install or use this package.
-                </p>
-            </div>
-        `;
-    } else if (results.vulnReports.length > 0) {
-        mainIcon.innerHTML = icons.shieldAlert;
-        html += `
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                <div class="flex items-center gap-2 text-yellow-700 font-semibold">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
-                    Vulnerabilities Found
+            `;
+        } else if (others.length > 0) {
+            mainIcon.innerHTML = icons.shieldAlert;
+            html += `
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                    <div class="flex items-center gap-2 text-yellow-700 font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        Vulnerabilities Found
+                    </div>
+                    <p class="text-yellow-700 mt-2 text-sm">
+                        This package has known vulnerabilities but is not flagged as malware.
+                    </p>
                 </div>
-                <p class="text-yellow-700 mt-2 text-sm">
-                    This package has known vulnerabilities but is not flagged as malware.
-                </p>
+            `;
+        }
+        // List all vulnerabilities
+        html += `
+            <div class="mt-6">
+                <h3 class="font-semibold text-gray-900 mb-3">
+                    Vulnerability Reports (${osvData.vulns.length})
+                </h3>
+                <div class="space-y-3">
+                    ${osvData.vulns.map(vuln => `
+                        <div class="p-4 rounded-lg border ${vuln.id.startsWith('MAL-') ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-mono text-sm font-medium ${vuln.id.startsWith('MAL-') ? 'text-red-700' : 'text-yellow-700'}">
+                                            ${vuln.id}
+                                        </span>
+                                        ${vuln.id.startsWith('MAL-') ? '<span class="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded font-medium">MALWARE</span>' : ''}
+                                    </div>
+                                    <p class="text-sm mt-1 ${vuln.id.startsWith('MAL-') ? 'text-red-600' : 'text-yellow-700'}">
+                                        ${vuln.summary || 'No summary available'}
+                                    </p>
+                                    ${vuln.aliases && vuln.aliases.length > 0 ? `
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            Also known as: ${vuln.aliases.join(', ')}
+                                        </p>
+                                    ` : ''}
+                                    <div class="flex items-center gap-3 mt-2 flex-wrap">
+                                        <a href="https://osv.dev/vulnerability/${vuln.id}" target="_blank" rel="noopener noreferrer" 
+                                           class="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:underline">
+                                            OSV.dev
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         `;
     } else {
@@ -223,32 +233,11 @@ function renderResults(results) {
             </div>
         `;
     }
-    // Sources
-    html += `
-        <div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-            <div class="flex items-center gap-2 text-gray-700 font-medium mb-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                Checked against:
-            </div>
-            <ul class="text-sm text-gray-600 space-y-1">
-                <li class="flex items-center gap-1">
-                    <svg class="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    OSV.dev (Google)
-                </li>
-            </ul>
-        </div>
-    `;
-    // Malware reports
-    if (results.malwareReports.length > 0) {
-        html += `
-            <div class="mt-6">
-                <h3 class="font-semibold text-gray-900 mb-3">
-                    Malware Reports (${results.malwareReports.length})
-                </h3>
-                <div class="space-y-3">
-                    ${results.malwareReports.map(report => `
-                        <div class="p-4 rounded
+    resultsContainer.innerHTML = html;
+}
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const packageName = document.getElementById('package').value.trim();
+    const version = document.getElementById('version').value.trim();
+    const ecosystem = document.getElementById('ecosystem').
